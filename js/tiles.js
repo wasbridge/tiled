@@ -304,8 +304,8 @@ tiles.Entity = function(config) {
 		this.location.x += dx;
 		this.location.y += dy;
 
-		this.velocityMagnitude += Math.sqrt(Math.pow(dx, 2) + Math.pow(dy, 2));
-		this.velocityAngle += Math.atan2(dy,dx);
+		this.velocityMagnitude = Math.sqrt(Math.pow(dx, 2) + Math.pow(dy, 2));
+		this.velocityAngle = Math.atan2(dy,dx);
 
 		this.location.x = Math.min(extents.width - cachedSize.width, Math.max(0, this.location.x));
 		this.location.y = Math.min(extents.height - cachedSize.height, Math.max(0, this.location.y));
@@ -322,11 +322,15 @@ tiles.Entity = function(config) {
 
 	this.clearCollision = function(otherEnt, world, previousCollisions) {
 		var clearCount = 0;
+		var tmp = this.clearCollision;
 
 		previousCollisions.push(otherEnt);
+
+		this.clearCollision = function() {}; //don't allow recursion
 		while (this.detectCollision(otherEnt, world, previousCollisions) && clearCount < 10) {
 			clearCount++;
 		}
+		this.clearCollision = tmp;
 	};
 
 	this.detectCollision = function(otherEnt, world, previousCollisions) {
