@@ -82,13 +82,14 @@ grasslands.generateCarConfig = function(number) {
 			
 			var widthFactor = leftRight ? .9 : .5;
 			var heightFactor = leftRight ? .5 : .9;
-
-			return {
-				x: character.location.x + ((1-widthFactor) / 2) * size.width,
-				y: character.location.y + ((1-heightFactor) / 2) * size.height,
+			var rect = {
+				x: ((1-widthFactor) / 2) * size.width,
+				y: ((1-heightFactor) / 2) * size.height,
 				width: size.width * widthFactor,
 				height: size.height * heightFactor
 			}
+
+			return tiles.utils.rectToPolygon(rect)
 		}
 	};
 };
@@ -107,8 +108,21 @@ grasslands.generateRockConfig = function(number) {
 			};
 			rock.setSprite('default');
 		},
-		postRender: function(ctx, rock, world) {
-
+		/*
+		postRender: function(ctx, character, world) {
+			character.renderHitArea(ctx, world);
+		},*/
+		hitArea: function(character, world) {
+			var poly = [];
+			poly.push({x:32, y:1});
+			poly.push({x:7, y:14});
+			poly.push({x:0, y:36});
+			poly.push({x:17, y:62});
+			poly.push({x:44, y:62});
+			poly.push({x:62, y:46});
+			poly.push({x:63, y:25});
+			poly.push({x:55, y:13});
+			return poly;
 		}
 	};	
 };
@@ -210,15 +224,14 @@ grasslands.generateRockConfig = function(number) {
 
 			character.move(dx, dy);
 			character.clearCollision(entity, world, prevCollisions);
-		}, 
+		},
 		hitArea: function(character, world) {
-			var size = character.size(world);
-			return {
-				x: character.location.x + .22 * size.width,
-				y: character.location.y + .75 * size.height,
-				width: size.width * .56,
-				height: size.height * .15
-			}
+			var poly = [];
+			poly.push({x:20, y:55});
+			poly.push({x:20, y:64});
+			poly.push({x:45, y:64});
+			poly.push({x:45, y:55});
+			return poly;
 		}
 	};
 
