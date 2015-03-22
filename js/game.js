@@ -144,7 +144,6 @@ grasslands.generateRockConfig = function(number) {
 		},
 		type: 'character',
 		detectsCollisions: true,
-		detectsPixelCollisions: false, //false b/c our sprite varies too much
 		speed: 2,
 		mapExtents: extents,
 		onInit: function(character, world) {

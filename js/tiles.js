@@ -22,58 +22,6 @@ tiles.utils = {
 		       r2.x + r2.width < r1.x || 
 		       r2.y > r1.y + r1.height ||
 		       r2.y + r2.height < r1.y);
-	},
-	isPixelPainted: function(x,y,canvas) {
-		var iData = canvas.getImageData(x,y,1,1);
-		return iData.data[3] >= 100;
-	},
-	pixelsColide: function(spriteA, spriteAPosition, spriteAHitArea, spriteB, spriteBPosition, spriteBHitArea, imgLoader) {
-		//range intersection already checked
-		var spriteACanvas = document.createElement('canvas');
-		var spriteACtx = spriteACanvas.getContext('2d');
-
-
-		var spriteBCanvas = document.createElement('canvas')
-		var spriteBCtx = spriteBCanvas.getContext('2d');
-
-
-		var startX = Math.floor(Math.max(spriteAPosition.x + spriteAHitArea.x, 
-							spriteBPosition.x + spriteBHitArea.x));
-
-		var endX = Math.ceil(Math.min(spriteAPosition.x + spriteAHitArea.x + spriteAHitArea.width,
-							spriteBPosition.x + spriteBHitArea.x + spriteBHitArea.width));
-
-		var startY = Math.floor(Math.max(spriteAPosition.y + spriteAHitArea.y, 
-							spriteBPosition.y + spriteBHitArea.y));
-
-		var endY = Math.ceil(Math.min(spriteAPosition.y + spriteAHitArea.y + spriteAHitArea.height,
-							spriteBPosition.y + spriteBHitArea.y + spriteBHitArea.height));
-
-		spriteACanvas.setAttribute('width', endX - startX);
-		spriteBCanvas.setAttribute('width', endX - startX);
-		spriteACanvas.setAttribute('height', endY - startY);
-		spriteBCanvas.setAttribute('height', endY - startY);
-
-		spriteACtx.translate(-startX, -startY);
-		spriteA.render(spriteACtx, imgLoader, spriteAPosition);
-
-		spriteBCtx.translate(-startX, -startY);
-		spriteB.render(spriteBCtx, imgLoader, spriteBPosition);
-
-		var ret = false;
-		for (var x=0,lenX=endX-startX; x <= lenX; ++x) {
-			for (var y=0,lenY=endY-startY; y <= lenY; ++y) {
-				if (this.isPixelPainted(x,y,spriteACtx) && this.isPixelPainted(x,y,spriteBCtx)) {
-					ret = true;
-					break;
-				}
-			}
-
-			if (ret)
-				break;
-		}
-
-		return ret;
 	}
 };
 
@@ -373,29 +321,16 @@ tiles.Entity = function(config) {
 	};
 
 	this.detectCollision = function(otherEnt, world, previousCollisions) {
-		var thisEntHitAreaWorld = this.hitAreaWorldPixels(world);
-		var otherEntHitAreaWorld = otherEnt.hitAreaWorldPixels(world);
-		var otherEntHitAreaEnt;
-		var thisEntHitAreaEnt;
+		var thisEntHitArea = this.hitArea(world);
+		var otherEntHitArea = otherEnt.hitArea(world);
 		var toReturn = false;
 		var clearCount = 0;
 
 		previousCollisions = previousCollisions || [];
 
-		if (tiles.utils.intersectRect(thisEntHitAreaWorld, otherEntHitAreaWorld)) {	
-			if (this.config.detectsPixelCollisions) {
-				thisEntHitAreaEnt = this.hitAreaEntPixels(world);
-				otherEntHitAreaEnt = otherEnt.hitAreaEntPixels(world);
-				if (tiles.utils.pixelsColide(this.sprite, this.location, thisEntHitAreaEnt, 
-						otherEnt.sprite, otherEnt.location, otherEntHitAreaEnt, 
-						world.resources.entityData)) {
-					this.config.onCollisionDetect(this, otherEnt, world, previousCollisions);
-					toReturn = true;
-				}
-			} else {
-				this.config.onCollisionDetect(this, otherEnt, world, previousCollisions);
-				toReturn = true;
-			}	
+		if (tiles.utils.intersectRect(thisEntHitArea, otherEntHitArea)) {	
+			this.config.onCollisionDetect(this, otherEnt, world, previousCollisions);
+			toReturn = true;
 		}
 
 		//make sure we inform the other entity of the collision
@@ -444,17 +379,7 @@ tiles.Entity = function(config) {
 		} while (retest && count <= 10);
 	};
 
-	this.hitAreaEntPixels = function(world) {
-		var worldPixels = this.hitAreaWorldPixels(world);
-		return {
-			x: worldPixels.x - this.location.x,
-			y: worldPixels.y - this.location.y,
-			width: worldPixels.width,
-			height: worldPixels.height
-		};
-	};
-
-	this.hitAreaWorldPixels = function(world) {
+	this.hitArea = function(world) {
 		if (this.config.hitArea)
 			return this.config.hitArea(this, world);
 
