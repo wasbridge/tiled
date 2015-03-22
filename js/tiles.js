@@ -1,10 +1,19 @@
 var tiles = tiles || {};
 
 tiles.utils = {
-	generateSpriteSlice: function(key, row, count) {
+	generateUUID: function() {
+		return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+	    	var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
+	    	return v.toString(16);
+		});
+	},
+	generateSpriteSlice: function(key, row, count, byRow) {
 		var ret = [];
 		for (var i=0; i < count; ++i) {
-			ret.push(key + '-' + row + '-' + i);
+			if (byRow)
+				ret.push(key + '-' + row + '-' + i);
+			else
+				ret.push(key + '-' + i + '-' + row);
 		}
 		return ret;
 	},
@@ -281,6 +290,14 @@ tiles.Entity = function(config) {
 	this.lastLocation;
 	this.velocityAngle = 0;
 	this.velocityMagnitude = 0;
+	this.id = tiles.utils.generateUUID();
+
+	this.type = function() {
+		if (config.type)
+			return config.type;
+		else
+			return "unknown";
+	};
 
 	this.init = function(world) {
 		extents = world.mapData.extents(world.resources.tileSize);
@@ -331,69 +348,90 @@ tiles.Entity = function(config) {
 		}		
 	};
 
-	this.changeSpeed = function(value) {
-		this.config.speed = value;
+	this.changeSpriteSpeed = function(value) {
 		this.sprite.speed = Math.max(1, this.sprite.defaultSpeed / value);
 	};
 
 	this.move = function(dx, dy) {
-		dx *= this.config.speed;
-		dy *= this.config.speed;
-
 		this.location.x += dx;
 		this.location.y += dy;
 
-		this.velocityMagnitude = Math.sqrt(Math.pow(dx, 2) + Math.pow(dy, 2));
-		this.velocityAngle = Math.atan2(dy,dx);
+		this.velocityMagnitude += Math.sqrt(Math.pow(dx, 2) + Math.pow(dy, 2));
+		this.velocityAngle += Math.atan2(dy,dx);
 
 		this.location.x = Math.min(extents.width - cachedSize.width, Math.max(0, this.location.x));
 		this.location.y = Math.min(extents.height - cachedSize.height, Math.max(0, this.location.y));
 	};
 
 	this.update = function(world) {
+		this.velocityMagnitude = 0;
+		this.velocityAngle = 0;
+
 		if (this.config.onUpdate)
 			this.config.onUpdate(this, world);
 		this.sprite.update(world);
 	};
 
+	this.detectCollision = function(otherEnt, world, previousCollisions) {
+		var thisEntHitAreaWorld = this.hitAreaWorldPixels(world);
+		var otherEntHitAreaWorld = otherEnt.hitAreaWorldPixels(world);
+		var otherEntHitAreaEnt;
+		var thisEntHitAreaEnt;
+		var toReturn = false;
+
+		previousCollisions = previousCollisions || [];
+
+		if (tiles.utils.intersectRect(thisEntHitAreaWorld, otherEntHitAreaWorld)) {	
+			if (this.config.detectsPixelCollisions) {
+				thisEntHitAreaEnt = this.hitAreaEntPixels(world);
+				otherEntHitAreaEnt = otherEnt.hitAreaEntPixels(world);
+				if (tiles.utils.pixelsColide(this.sprite, this.location, thisEntHitAreaEnt, 
+						otherEnt.sprite, otherEnt.location, otherEntHitAreaEnt, 
+						world.resources.entityData)) {
+					this.config.onCollisionDetect(this, otherEnt, world, previousCollisions);
+					toReturn = true;
+				}
+			} else {
+				this.config.onCollisionDetect(this, otherEnt, world, previousCollisions);
+				toReturn = true;
+			}	
+		}
+
+		if (toReturn && otherEnt.detectsCollisions) {
+			otherEnt.config.onCollisionDetect(otherEnt, this, world, previousCollisions);
+		}
+
+		return toReturn;
+	},
+
 	this.updateCollisions = function(world) {
 		//todo check if tile is valid
 		//for now we just check if we collide with other entities
+		var exclusions = [];
+		var previousCollisions = [];
+		var collision;
 		var retest;
+		var count = 0;
 		do
 		{
-			var otherEnt;
-			var otherEntHitAreaWorld;
-			var otherEntHitAreaEnt;
-			var thisEntHitAreaWorld = this.hitAreaWorldPixels(world);
-			var thisEntHitAreaEnt = this.hitAreaEntPixels(world);
-
+			count++;
 			retest = false;
+
 			for (var i=0,len=world.entities.length; i < len; ++i) {
 				otherEnt = world.entities[i];
 				if (this != otherEnt) {
-					otherEntHitAreaWorld = otherEnt.hitAreaWorldPixels(world);
-					if (tiles.utils.intersectRect(thisEntHitAreaWorld, otherEntHitAreaWorld)) {
-						
-						if (this.config.detectsPixelCollisions) {
-							otherEntHitAreaEnt = otherEnt.hitAreaEntPixels(world);
-							if (tiles.utils.pixelsColide(this.sprite, this.location, thisEntHitAreaEnt, 
-									otherEnt.sprite, otherEnt.location, otherEntHitAreaEnt, 
-									world.resources.entityData)) {
-								this.config.onCollisionDetect(this, otherEnt, world);
-								retest = true;
-								break;
-							}
-						} else {
-							this.config.onCollisionDetect(this, otherEnt, world);
+					if (exclusions.indexOf(otherEnt.id) < 0) {
+						collision = this.detectCollision(otherEnt, world, previousCollisions);
+						if (collision) {
+							exclusions.push(otherEnt.id);
+							previousCollisions.push(otherEnt);
 							retest = true;
 							break;
 						}
-						
 					}
 				}
 			}
-		} while (retest);
+		} while (retest && count <= 10);
 	};
 
 	this.hitAreaEntPixels = function(world) {

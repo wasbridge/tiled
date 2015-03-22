@@ -34,43 +34,44 @@ grasslands.InputHandler = function() {
 	}.bind(this));
 };
 
-grasslands.generateCarConfig = function(number, mainCharacter) {
+grasslands.generateCarConfig = function(number) {
 	return {
 		spriteSets: {
-			'left': tiles.utils.generateSpriteSlice('car', 1, 4),
-			'right': tiles.utils.generateSpriteSlice('car', 2, 4),
-			'up': tiles.utils.generateSpriteSlice('car', 3, 4),
-			'down': tiles.utils.generateSpriteSlice('car', 0, 4),
+			'left': tiles.utils.generateSpriteSlice('car', 1, 4, true),
+			'right': tiles.utils.generateSpriteSlice('car', 2, 4, true),
+			'up': tiles.utils.generateSpriteSlice('car', 3, 4, true),
+			'down': tiles.utils.generateSpriteSlice('car', 0, 4, true),
 		},
+		type: 'car',
 		number: number,
-		mainCharacter: mainCharacter,
 		detectsCollisions: true,
-		onCollisionDetect: function(character, entity, world) {
-			var dx = -character.velocityMagnitude * Math.cos(character.velocityAngle);
-			var dy = -character.velocityMagnitude * Math.sin(character.velocityAngle);
-			character.location.x += dx;
-			character.location.y += dy;
-
-			character.updateSprite(character.spriteSetKey =='right' ? 'left' : 'right', true);
-		},
+		speed: 20,
 		onInit: function(character, world) {
 			var initDirection = Math.random() > .5 ? 'right' : 'left';
+			character.setSprite(initDirection, 0, true);
+			character.changeSpriteSpeed(this.speed);
 			character.location = {
 				x:80 + (Math.random() * (extents.width - 80)), 
 				y:world.resources.tileSize.height * (number + 0.5)
 			};
-			character.setSprite(initDirection, 0, true);
-			character.changeSpeed(Math.random() * 10 + 1);
-			character.type == 'car';
+			
+		},
+		onCollisionDetect: function(car, entity, world) {
+			if (entity.type() == 'rock') {
+				var dx = 0; 
+				dx = -car.velocityMagnitude * Math.cos(car.velocityAngle);
+				car.updateSprite(car.spriteSetKey =='right' ? 'left' : 'right', true);
+				car.move(dx, 0);
+			} 
 		},
 		onUpdate: function(character, world) {
 			if (character.isOnEdge(world))
 				character.updateSprite(character.spriteSetKey =='right' ? 'left' : 'right', true);
 
 			if (character.spriteSetKey =='right')
-				character.move(1,0);
+				character.move(1 * this.speed, 0);
 			else if (character.spriteSetKey == 'left')
-				character.move(-1,0);
+				character.move(-1 * this.speed, 0);
 
 		},
 		hitArea: function(character, world) {
@@ -95,15 +96,15 @@ grasslands.generateRockConfig = function(number) {
 		spriteSets: {
 			'default': ['rock']
 		},
+		type: 'rock',
 		onInit: function(rock, world) {
 			var extents = world.mapData.extents(world.resources.tileSize);
 			rock.location = { 
-				x:80 + (Math.random() * (extents.width - 80)), 
-				y:80 + (Math.random() * (extents.height - 80))
+				x:1000, 
+				y:world.resources.tileSize.height * (number + 0.5)
 			};
 			rock.setSprite('default');
 			rock.speed = 0;
-			rock.type == 'rock';
 		},
 		postRender: function(ctx, rock, world) {
 
@@ -124,22 +125,27 @@ grasslands.generateRockConfig = function(number) {
 
 	var resources = new tiles.Resources({width: 250, height: 250});
 	resources.emplaceTileData('road', 'img/road.png');
-	resources.emplaceEntitySprite('character', 'img/character-8x4x.png', 4, 8);
+	resources.emplaceEntitySprite('character', 'img/character-9x4x.png', 4, 9);
 	resources.emplaceEntitySprite('car', 'img/car-4x4x.png', 4, 4);
 	resources.emplaceEntityData('rock', 'img/rock.png');
 
 	var mapData = new tiles.MapData('road');
-	mapData.set(30, 30, 'road');
+	mapData.set(10, 10, 'road');
+
+	var extents = mapData.extents(resources.tileSize);
 
 	var mainCharacterConfig = {
 		spriteSets: {
-			'left': tiles.utils.generateSpriteSlice('character', 1, 8),
-			'right': tiles.utils.generateSpriteSlice('character', 2, 8),
-			'up': tiles.utils.generateSpriteSlice('character', 3, 8),
-			'down': tiles.utils.generateSpriteSlice('character', 0, 8),
+			'left': tiles.utils.generateSpriteSlice('character', 1, 9, true),
+			'right': tiles.utils.generateSpriteSlice('character', 3, 9, true),
+			'up': tiles.utils.generateSpriteSlice('character', 0, 9, true),
+			'down': tiles.utils.generateSpriteSlice('character', 2, 9, true),
 		},
+		type: 'character',
 		detectsCollisions: true,
 		detectsPixelCollisions: false, //false b/c our sprite varies too much
+		speed: 2,
+		mapExtents: extents,
 		onInit: function(character, world) {
 			character.location = {x: 0, y: 0};
 			character.setSprite('down', 0, false);
@@ -147,35 +153,57 @@ grasslands.generateRockConfig = function(number) {
 		onUpdate: function(character, world) {
 			var keys = inputs.keyboard.keys;
 			if (keys.indexOf(16) >= 0) {
-				character.changeSpeed(5);
+				this.speed = 5;
+				character.changeSpriteSpeed(5);
 			} else {
-				character.changeSpeed(2);
+				this.speed = 2;
+				character.changeSpriteSpeed(2);
 			}
 
 			if (keys.indexOf(37) >= 0) {
-				character.move(-1,0);
+				character.move(-1 * this.speed, 0);
 				character.updateSprite('left', true);
 			} else if (keys.indexOf(39) >= 0) {
-				character.move(1,0);
+				character.move(1 * this.speed,0);
 				character.updateSprite('right', true);
 			} else if (keys.indexOf(38) >=0) {
-				character.move(0, -1);
+				character.move(0, -1 * this.speed);
 				character.updateSprite('up', true);
 			} else if (keys.indexOf(40) >= 0) {
-				character.move(0, 1);
+				character.move(0, 1 * this.speed);
 				character.updateSprite('down', true);
 			} else {
 				character.updateSprite(character.spriteSetKey, false);
 			}
 		},
-		onCollisionDetect: function(character, entity, world) {
-			if (entity.type == 'car')
-				return;
+		onCollisionDetect: function(character, entity, world, prevCollisions) {
+			var dx = 0;
+			var dy = 0;
 			
-			var dx = -character.velocityMagnitude * Math.cos(character.velocityAngle);
-			var dy = -character.velocityMagnitude * Math.sin(character.velocityAngle);
-			character.location.x += dx;
-			character.location.y += dy;
+			if (entity.type() == 'rock') {
+				if (prevCollisions.length == 0) {
+					dx = -character.velocityMagnitude * Math.cos(character.velocityAngle);
+					dy = -character.velocityMagnitude * Math.sin(character.velocityAngle);
+				} else {
+					dx = 0;
+					dy = -character.velocityMagnitude * Math.cos(character.velocityAngle);
+				}
+			} else if (entity.type() == 'car') {
+				var characterMomentumX = character.velocityMagnitude * Math.cos(character.velocityAngle);
+				var carMomentumX = entity.velocityMagnitude * Math.cos(entity.velocityAngle);
+				var characterSize = character.size(world);
+
+				dx = carMomentumX - characterMomentumX;
+
+				if (character.location.x + dx < 0 ||
+					character.location.x + characterSize.width >= this.mapExtents.width ||
+					prevCollisions.length > 0) {
+					dy = dx;
+					dx = 0;
+				}
+			}
+
+			character.move(dx, dy);
 		}, 
 		hitArea: function(character, world) {
 			var size = character.size(world);
@@ -190,16 +218,16 @@ grasslands.generateRockConfig = function(number) {
 
 	var entities = [];
 	var mainCharacter = new tiles.Entity(mainCharacterConfig);	
-	var extents = mapData.extents();
 	var numRocks = extents.rows * extents.cols * .1;
 
 	for (var i=0; i < extents.rows; ++i) {
-		entities.push(new tiles.Entity(grasslands.generateCarConfig(i, mainCharacter)));
-	}
-	for (var i=0; i < numRocks; ++i) {
 		entities.push(new tiles.Entity(grasslands.generateRockConfig(i)));
 	}
 
+	for (var i=0; i < extents.rows; ++i) {
+		entities.push(new tiles.Entity(grasslands.generateCarConfig(i)));
+	}
+	
 	entities.push(mainCharacter);
 	
 	var world = new tiles.World(mapData, entities, resources, canvas);
