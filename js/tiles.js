@@ -1,6 +1,13 @@
 var tiles = tiles || {};
 
 tiles.utils = {
+	generateSpriteSlice: function(key, row, count) {
+		var ret = [];
+		for (var i=0; i < count; ++i) {
+			ret.push(key + '-' + row + '-' + i);
+		}
+		return ret;
+	},
 	intersectRect: function(r1, r2) {
 		return !(r2.x > r1.x + r1.width || 
 		       r2.x + r2.width < r1.x || 
@@ -285,6 +292,25 @@ tiles.Entity = function(config) {
 		this.lastLocation = this.location;
 	};
 
+	this.isOnEdge = function(world) {
+		var size = this.size(world);
+		var rect = {
+			x: this.location.x,
+			y: this.location.y,
+			width: size.width,
+			height: size.height
+		};
+
+		if (rect.x == 0 ||
+			rect.x + rect.width == extents.width ||
+			rect.y == 0 ||
+			rect.y + rect.height == extents.height) {
+			return true;
+		}
+
+		return false;
+	};
+
 	this.setSprite = function(key, index, animate) {
 		this.spriteSetKey = key;
 		this.sprite = new tiles.Sprite(this.spriteSets[key])
@@ -507,7 +533,7 @@ tiles.World = function(mapData, entities, resources, canvas) {
 
 		var rowsPerScreen = Math.ceil(canvas.height / tileSize.height);
 		var colsPerScreen = Math.ceil(canvas.width / tileSize.width);
-		
+
 		if (centerEntity) {
 			var size = centerEntity.size(this);
 			var centerPosX = centerEntity.location.x + size.width / 2;
