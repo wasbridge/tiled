@@ -320,11 +320,19 @@ tiles.Entity = function(config) {
 		this.sprite.update(world);
 	};
 
+	this.clearCollision = function(otherEnt, world, previousCollisions) {
+		var clearCount = 0;
+
+		previousCollisions.push(otherEnt);
+		while (this.detectCollision(otherEnt, world, previousCollisions) && clearCount < 10) {
+			clearCount++;
+		}
+	};
+
 	this.detectCollision = function(otherEnt, world, previousCollisions) {
 		var thisEntHitArea = this.hitArea(world);
 		var otherEntHitArea = otherEnt.hitArea(world);
 		var toReturn = false;
-		var clearCount = 0;
 
 		previousCollisions = previousCollisions || [];
 
@@ -338,14 +346,6 @@ tiles.Entity = function(config) {
 			otherEnt.config.onCollisionDetect(otherEnt, this, world, previousCollisions);
 		}
 
-		//make sure we clear the collision
-		if (toReturn) {
-			previousCollisions.push(otherEnt);
-			while (this.detectCollision(otherEnt, world, previousCollisions) && clearCount < 10) {
-				clearCount++;
-			}
-		}
-		
 		return toReturn;
 	},
 

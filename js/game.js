@@ -63,6 +63,7 @@ grasslands.generateCarConfig = function(number) {
 				dx = -car.velocityMagnitude * Math.cos(car.velocityAngle);
 				car.updateSprite(car.spriteSetKey =='right' ? 'left' : 'right', true);
 				car.move(dx, 0);
+				car.clearCollision(entity, world, prevCollisions);
 			} 
 		},
 		onUpdate: function(character, world) {
@@ -209,6 +210,7 @@ grasslands.generateRockConfig = function(number) {
 			}
 
 			character.move(dx, dy);
+			character.clearCollision(entity, world, prevCollisions);
 		}, 
 		hitArea: function(character, world) {
 			var size = character.size(world);
