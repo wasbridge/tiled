@@ -45,7 +45,7 @@ grasslands.generateCarConfig = function(number) {
 		type: 'car',
 		number: number,
 		detectsCollisions: true,
-		speed: 20,
+		speed: Math.random() * 17 + 3,
 		onInit: function(character, world) {
 			var extents = world.mapData.extents(world.resources.tileSize);
 			var initDirection = Math.random() > .5 ? 'right' : 'left';
@@ -106,7 +106,6 @@ grasslands.generateRockConfig = function(number) {
 				y:world.resources.tileSize.height * (number + 0.5)
 			};
 			rock.setSprite('default');
-			rock.speed = 0;
 		},
 		postRender: function(ctx, rock, world) {
 
