@@ -47,16 +47,17 @@ grasslands.generateCarConfig = function(number) {
 		detectsCollisions: true,
 		speed: 20,
 		onInit: function(character, world) {
+			var extents = world.mapData.extents(world.resources.tileSize);
 			var initDirection = Math.random() > .5 ? 'right' : 'left';
 			character.setSprite(initDirection, 0, true);
 			character.changeSpriteSpeed(this.speed);
 			character.location = {
-				x:80 + (Math.random() * (extents.width - 80)), 
+				x:Math.random() * extents.width, 
 				y:world.resources.tileSize.height * (number + 0.5)
 			};
 			
 		},
-		onCollisionDetect: function(car, entity, world) {
+		onCollisionDetect: function(car, entity, world, prevCollisions) {
 			if (entity.type() == 'rock') {
 				var dx = 0; 
 				dx = -car.velocityMagnitude * Math.cos(car.velocityAngle);
@@ -160,16 +161,21 @@ grasslands.generateRockConfig = function(number) {
 				character.changeSpriteSpeed(2);
 			}
 
-			if (keys.indexOf(37) >= 0) {
+			var arrows = keys.filter(function(key) {
+				return key >= 37 && key <=40;
+			});
+
+			var arrow = arrows.pop() || 0;
+			if (arrow == 37) {
 				character.move(-1 * this.speed, 0);
 				character.updateSprite('left', true);
-			} else if (keys.indexOf(39) >= 0) {
+			} else if (arrow == 39) {
 				character.move(1 * this.speed,0);
 				character.updateSprite('right', true);
-			} else if (keys.indexOf(38) >=0) {
+			} else if (arrow == 38) {
 				character.move(0, -1 * this.speed);
 				character.updateSprite('up', true);
-			} else if (keys.indexOf(40) >= 0) {
+			} else if (arrow == 40) {
 				character.move(0, 1 * this.speed);
 				character.updateSprite('down', true);
 			} else {
