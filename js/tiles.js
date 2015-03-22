@@ -378,6 +378,7 @@ tiles.Entity = function(config) {
 		var otherEntHitAreaEnt;
 		var thisEntHitAreaEnt;
 		var toReturn = false;
+		var clearCount = 0;
 
 		previousCollisions = previousCollisions || [];
 
@@ -397,10 +398,19 @@ tiles.Entity = function(config) {
 			}	
 		}
 
+		//make sure we inform the other entity of the collision
 		if (toReturn && otherEnt.detectsCollisions) {
 			otherEnt.config.onCollisionDetect(otherEnt, this, world, previousCollisions);
 		}
 
+		//make sure we clear the collision
+		if (toReturn) {
+			previousCollisions.push(otherEnt);
+			while (this.detectCollision(otherEnt, world, previousCollisions) && clearCount < 10) {
+				clearCount++;
+			}
+		}
+		
 		return toReturn;
 	},
 
