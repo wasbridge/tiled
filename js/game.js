@@ -161,7 +161,7 @@ grasslands.generateRockConfig = function(number) {
 		speed: 2,
 		mapExtents: extents,
 		onInit: function(character, world) {
-			character.location = {x: 0, y: 0};
+			character.location = {x: 100, y: 100};
 			character.setSprite('down', 0, false);
 		},
 		onUpdate: function(character, world) {
@@ -225,12 +225,15 @@ grasslands.generateRockConfig = function(number) {
 			character.move(dx, dy);
 			character.clearCollision(entity, world, prevCollisions);
 		},
+		/*postRender: function(ctx, character, world) {
+			character.renderHitArea(ctx, world);
+		},*/
 		hitArea: function(character, world) {
 			var poly = [];
-			poly.push({x:20, y:55});
+			poly.push({x:20, y:50});
 			poly.push({x:20, y:64});
 			poly.push({x:45, y:64});
-			poly.push({x:45, y:55});
+			poly.push({x:45, y:50});
 			return poly;
 		}
 	};
@@ -251,6 +254,9 @@ grasslands.generateRockConfig = function(number) {
 	
 	var world = new tiles.World(mapData, entities, resources, canvas);
 	world.centerOn(mainCharacter);
+	world.onTick(function() {
+		
+	});
 
 	resources.load(function() {
 		world.start();

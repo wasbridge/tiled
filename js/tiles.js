@@ -81,6 +81,7 @@ tiles.utils = {
         return false;
     },
     intersectConvexPolygons: function(aVertList, bVertList) {
+        //http://gamemath.com/2011/09/detecting-whether-two-convex-polygons-overlap/
         // First, use all of A's edges to get candidate separating axes
         if (this.findSeparatingAxis(aVertList, bVertList))
             return false;
@@ -394,7 +395,9 @@ tiles.Entity = function(config) {
 
         if (this.config.onUpdate)
             this.config.onUpdate(this, world);
-        this.sprite.update(world);
+
+        if (this.spriteSets[this.spriteSetKey].length > 1)
+            this.sprite.update(world);
     };
 
     this.clearCollision = function(otherEnt, world, previousCollisions) {
@@ -431,8 +434,6 @@ tiles.Entity = function(config) {
     },
 
     this.updateCollisions = function(world) {
-        //todo check if tile is valid
-        //for now we just check if we collide with other entities
         var exclusions = [];
         var previousCollisions = [];
         var collision;
@@ -505,11 +506,13 @@ tiles.Entity = function(config) {
 
 tiles.Tile = function(own, rez) {
     var resource = rez instanceof Array ? rez : [rez];
+    var animate = resource.length > 1;
     var owner = own;
     var sprite = new tiles.Sprite(resource);
 
     this.update = function(world) {
-        sprite.update(world);
+        if (animate)
+            sprite.update(world);
     };
 
     this.render = function(ctx, world, origin) {
@@ -538,6 +541,8 @@ tiles.World = function(mapData, entities, resources, canvas) {
     var tileSize = this.resources.tileSize;
     var extents = this.mapData.extents(tileSize);
     
+    var onTickFn = null;
+
     this.tiles = new Array(extents.rows);
     
     for (var row=0; row < extents.rows; ++row) {
@@ -551,9 +556,56 @@ tiles.World = function(mapData, entities, resources, canvas) {
     for (var i=0,len=this.entities.length; i < len; ++i) {
         this.entities[i].init(this);
     }
+
+    this.tilesUnder = function(entity) {
+        var hitArea = entity.hitArea(this);
+        var size = entity.size(this);
+
+        var tileSize = this.resources.tileSize;
+        var colStart = Math.floor(entity.location.x / tileSize.width);
+        var colEnd = Math.ceil((entity.location.x + size.width) / tileSize.width);
+        var rowStart = Math.floor(entity.location.y / tileSize.height);
+        var rowEnd = Math.ceil((entity.location.y + size.height) / tileSize.height);
+        
+        var ret = [];
+        //search for tiles under rectangle which intersect with hitArea
+        for (var row=rowStart; row<=rowEnd; ++row) {
+            for(var col=colStart; col<=colEnd; ++col) {
+                var rect = {
+                    x: col * tileSize.width,
+                    y: row * tileSize.height,
+                    width: tileSize.width,
+                    height: tileSize.height
+                };
+
+                if (tiles.utils.intersectConvexPolygons(hitArea, tiles.utils.rectToPolygon(rect)))
+                    ret.push(this.tiles[row][col]);
+            }
+        }
+
+        return ret;
+    };
+
+    this.onTick = function(fn) {
+        onTickFn = fn;
+    };
     
     this.centerOn = function(entity) {
         centerEntity = entity;
+    };
+
+    this.insertEntity = function(entity, index) {
+        entity.init(this);
+        if (index != undefined)
+            this.entities.splice(index, 0, entity);
+        else
+            this.entities.push(entity);
+    };
+
+    this.removeEntity = function(entity) {
+        var index = this.entities.indexOf(entity);
+        if (index >= 0)
+            this.entities.splice(index, 1);
     };
 
     this.start = function() {
@@ -564,6 +616,8 @@ tiles.World = function(mapData, entities, resources, canvas) {
     this.run = function() {
         this.duration = (new Date().getTime()) - this.startTime;
         id = requestAnimationFrame(this.run.bind(this));
+        if (onTickFn)
+            onTickFn(this);
         this.update();
         this.render();
     };
