@@ -115,8 +115,8 @@ grasslands.generateRockConfig = function(number) {
 		onInit: function(rock, world) {
 			var extents = world.mapData.extents(world.resources.tileSize);
 			rock.location({ 
-				x:extents.width * Math.random() + 80,
-				y:extents.height * Math.random() + 150
+				x:1000,
+				y:world.resources.tileSize.height * (number + 0.5)
 			});
 			rock.setSprite('default');
 		},
@@ -130,38 +130,8 @@ grasslands.generateRockConfig = function(number) {
 	};	
 };
 
-(function() {
-	var canvas = document.getElementById('tiles');
-	var inputs = new grasslands.InputHandler();
-
-	$(window).resize(function() {
-		canvas.width = $('.container').width();
-		canvas.height = $('.container').height();
-	});
-
-	$(window).trigger("resize");
-
-	var resources = new tiles.Resources({width: 250, height: 250});
-	resources.emplaceTileData('road', 'img/road.png');
-	resources.emplaceEntitySprite('character', 'img/character-9x4x.png', 4, 9);
-	resources.emplaceEntitySprite('car', 'img/car-4x4x.png', 4, 4);
-	resources.emplaceEntityData('rock', 'img/rock.png');
-
-	var mapData = new tiles.MapData('road');
-	mapData.set(10, 10, 'road');
-
-	var extents = mapData.extents(resources.tileSize);
-
-	var entListContainsType = function(type, entList) {
-		for(var i=0,len=entList.length; i < len; ++i) {
-			if (entList[i].type() == type)
-				return true;
-		}
-
-		return false;
-	}
-
-	var mainCharacterConfig = {
+grasslands.mainCharacterConfig = function(inputs, extents) {
+	return {
 		spriteSets: {
 			'left': tiles.utils.generateSpriteSlice('character', 1, 9, true),
 			'right': tiles.utils.generateSpriteSlice('character', 3, 9, true),
@@ -250,12 +220,33 @@ grasslands.generateRockConfig = function(number) {
 			return poly;
 		}
 	};
+};
+
+(function() {
+	var canvas = document.getElementById('tiles');
+	var inputs = new grasslands.InputHandler();
+
+	$(window).resize(function() {
+		canvas.width = $('.container').width();
+		canvas.height = $('.container').height();
+	});
+
+	$(window).trigger("resize");
+
+	var resources = new tiles.Resources({width: 250, height: 250});
+	resources.emplaceTileData('road', 'img/road.png');
+	resources.emplaceEntitySprite('character', 'img/character-9x4x.png', 4, 9);
+	resources.emplaceEntitySprite('car', 'img/car-4x4x.png', 4, 4);
+	resources.emplaceEntityData('rock', 'img/rock.png');
+
+	var mapData = new tiles.MapData('road');
+	mapData.set(10, 10, 'road');
 
 	var entities = [];
-	var mainCharacter = new tiles.Entity(mainCharacterConfig);	
+	var extents = mapData.extents(resources.tileSize);
 	var numRocks = extents.rows * extents.cols * .20;
 
-	for (var i=0; i < numRocks; ++i) {
+	for (var i=0; i < extents.rows; ++i) {
 		entities.push(new tiles.Entity(grasslands.generateRockConfig(i)));
 	}
 
@@ -263,8 +254,9 @@ grasslands.generateRockConfig = function(number) {
 		entities.push(new tiles.Entity(grasslands.generateCarConfig(i)));
 	}
 	
+	var mainCharacter = new tiles.Entity(grasslands.mainCharacterConfig(inputs, extents));	
 	entities.push(mainCharacter);
-	
+
 	var world = new tiles.World(mapData, entities, resources, canvas);
 	world.centerOn(mainCharacter);
 	resources.load(function() {
