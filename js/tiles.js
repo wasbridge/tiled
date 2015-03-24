@@ -94,11 +94,11 @@ tiles.utils = {
         return true;
     },
     rectToPolygon: function(rect) {
-        var poly = [];
-        poly.push({x:rect.x, y:rect.y});
-        poly.push({x:rect.x+rect.width, y:rect.y});
-        poly.push({x:rect.x+rect.width, y:rect.y+rect.height});
-        poly.push({x:rect.x, y:rect.y+rect.height});
+        var poly = new Array(4);
+        poly[0] = ({x:rect.x, y:rect.y});
+        poly[1] = ({x:rect.x+rect.width, y:rect.y});
+        poly[2] = ({x:rect.x+rect.width, y:rect.y+rect.height});
+        poly[3] = ({x:rect.x, y:rect.y+rect.height});
         return poly;
     }
 };
@@ -305,15 +305,15 @@ tiles.Sprite = function(resources) {
 }
 
 tiles.Entity = function(config) {
-    var cachedSize = {width:0, height:0};
+    var cachedSize = null;
+    var location;
+    var cachedHitArea;
 
     this.config = config;
     this.detectsCollisions = this.config.detectsCollisions ? true : false;
     this.spriteSetKey = null;
     this.spriteSets = this.config.spriteSets; // {key:[], key2:[]}
     this.sprite;
-    this.location;
-    this.lastLocation;
     this.velocityAngle = 0;
     this.velocityMagnitude = 0;
     this.id = tiles.utils.generateUUID();
@@ -325,21 +325,29 @@ tiles.Entity = function(config) {
             return "unknown";
     };
 
+    this.location = function(loc) {
+        if (loc != undefined) {
+            if (location == undefined || loc.x != location.x || loc.y != location.y ) {
+                location = loc;
+                cachedHitArea = null;
+            }
+        }
+        return location;
+    };
+
     this.init = function(world) {
         extents = world.mapData.extents(world.resources.tileSize);
 
         this.config.onInit(this, world);
-        if (!this.location || !this.sprite)
+        if (!location || !this.sprite)
             throw "location or sprite not initialized";
-
-        this.lastLocation = this.location;
     };
 
     this.isOnEdge = function(world) {
         var size = this.size(world);
         var rect = {
-            x: this.location.x,
-            y: this.location.y,
+            x: location.x,
+            y: location.y,
             width: size.width,
             height: size.height
         };
@@ -359,6 +367,8 @@ tiles.Entity = function(config) {
         this.sprite = new tiles.Sprite(this.spriteSets[key])
         this.sprite.index = index || 0;
         this.sprite.animate = animate || false;
+        cachedHitArea = null;
+        cachedSize = null;
     };
 
     this.updateSprite = function(key, animate) {
@@ -366,6 +376,8 @@ tiles.Entity = function(config) {
             this.spriteSetKey = key;
             this.sprite = new tiles.Sprite(this.spriteSets[key])
             this.sprite.animate = animate || false;
+            cachedHitArea = null;
+            cachedSize = null;
         }
 
         if (animate != this.sprite.animate) {
@@ -379,14 +391,9 @@ tiles.Entity = function(config) {
     };
 
     this.move = function(dx, dy) {
-        this.location.x += dx;
-        this.location.y += dy;
-
+        this.location({x:location.x + dx, y:location.y + dy});
         this.velocityMagnitude = Math.sqrt(Math.pow(dx, 2) + Math.pow(dy, 2));
         this.velocityAngle = Math.atan2(dy,dx);
-
-        this.location.x = Math.min(extents.width - cachedSize.width, Math.max(0, this.location.x));
-        this.location.y = Math.min(extents.height - cachedSize.height, Math.max(0, this.location.y));
     };
 
     this.update = function(world) {
@@ -396,6 +403,12 @@ tiles.Entity = function(config) {
         if (this.config.onUpdate)
             this.config.onUpdate(this, world);
 
+        var size = this.size(world);
+        this.location({
+            x: Math.min(extents.width - size.width, Math.max(0, location.x)),
+            y: Math.min(extents.height - size.height, Math.max(0, location.y))
+        });
+        
         if (this.spriteSets[this.spriteSetKey].length > 1)
             this.sprite.update(world);
     };
@@ -462,31 +475,42 @@ tiles.Entity = function(config) {
     };
 
     this.hitArea = function(world) {
-        if (this.config.hitArea) {
-            var pts = this.config.hitArea(this, world);
-            var loc = this.location;
-            return pts.map(function(pt) { return tiles.utils.addPts(pt, loc)});
+        if (cachedHitArea) {
+            return cachedHitArea;
         }
 
-        var size = this.size(world);
-        var poly = [];
-        poly.push(this.location);
-        poly.push({x:this.location.x + size.width, y:this.location.y});
-        poly.push({x:this.location.x + size.width, y:this.location.y + size.height});
-        poly.push({x:this.location.x, y:this.location.y + size.height});
+        var poly;
+        if (this.config.hitArea) {
+            var pts = this.config.hitArea(this, world);
+            var len = pts.length;
+            
+            poly = new Array(len);
+            for (var i=0; i<len; ++i) {
+                poly[i] = (tiles.utils.addPts(location, pts[i]));
+            }
+        } else {
+            var size = this.size(world);
+            poly = new Array(4);
+            poly[0] = (location);
+            poly[1] = ({x:location.x + size.width, y:location.y});
+            poly[2] = ({x:location.x + size.width, y:location.y + size.height});
+            poly[3] = ({x:location.x, y:location.y + size.height});
+        }
         return poly;
     };
 
     this.size = function(world) {
+        if (cachedSize)
+            return cachedSize;
+
         cachedSize = this.sprite.size(world.resources.entityData);
         return cachedSize;
     };
 
     this.render = function(ctx, world) {
-        this.sprite.render(ctx, world.resources.entityData, this.location);
+        this.sprite.render(ctx, world.resources.entityData, location);
         if (this.config.postRender)
             this.config.postRender(ctx, this, world);
-        this.lastLocation = this.location;
     };
 
     this.renderHitArea = function(ctx, world) {
@@ -562,10 +586,11 @@ tiles.World = function(mapData, entities, resources, canvas) {
         var size = entity.size(this);
 
         var tileSize = this.resources.tileSize;
-        var colStart = Math.floor(entity.location.x / tileSize.width);
-        var colEnd = Math.ceil((entity.location.x + size.width) / tileSize.width);
-        var rowStart = Math.floor(entity.location.y / tileSize.height);
-        var rowEnd = Math.ceil((entity.location.y + size.height) / tileSize.height);
+        var location = entity.location();
+        var colStart = Math.floor(location.x / tileSize.width);
+        var colEnd = Math.ceil((location.x + size.width) / tileSize.width);
+        var rowStart = Math.floor(location.y / tileSize.height);
+        var rowEnd = Math.ceil((location.y + size.height) / tileSize.height);
         
         var ret = [];
         //search for tiles under rectangle which intersect with hitArea
@@ -660,8 +685,9 @@ tiles.World = function(mapData, entities, resources, canvas) {
 
         if (centerEntity) {
             var size = centerEntity.size(this);
-            var centerPosX = centerEntity.location.x + size.width / 2;
-            var centerPosY = centerEntity.location.y + size.height / 2;
+            var location = centerEntity.location();
+            var centerPosX = location.x + size.width / 2;
+            var centerPosY = location.y + size.height / 2;
 
             left = centerPosX - canvas.width/2;
             top = centerPosY - canvas.height/2;

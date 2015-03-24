@@ -46,15 +46,30 @@ grasslands.generateCarConfig = function(number) {
 		number: number,
 		detectsCollisions: true,
 		speed: Math.random() * 17 + 3,
+		polygon: (function(){
+			var size = {width:66, height:66};
+			var leftRight = true;
+			
+			var widthFactor = leftRight ? .9 : .5;
+			var heightFactor = leftRight ? .5 : .9;
+			var rect = {
+				x: ((1-widthFactor) / 2) * size.width,
+				y: ((1-heightFactor) / 2) * size.height,
+				width: size.width * widthFactor,
+				height: size.height * heightFactor
+			}
+
+			return tiles.utils.rectToPolygon(rect)
+		}()),
 		onInit: function(character, world) {
 			var extents = world.mapData.extents(world.resources.tileSize);
 			var initDirection = Math.random() > .5 ? 'right' : 'left';
 			character.setSprite(initDirection, 0, true);
 			character.changeSpriteSpeed(this.speed);
-			character.location = {
+			character.location({
 				x:Math.random() * extents.width, 
 				y:world.resources.tileSize.height * (number + 0.5)
-			};
+			});
 			
 		},
 		onCollisionDetect: function(car, entity, world, prevCollisions) {
@@ -74,22 +89,9 @@ grasslands.generateCarConfig = function(number) {
 				character.move(1 * this.speed, 0);
 			else if (character.spriteSetKey == 'left')
 				character.move(-1 * this.speed, 0);
-
 		},
 		hitArea: function(character, world) {
-			var size = character.size(world);
-			var leftRight = character.spriteSetKey == 'left' || character.spriteSetKey == 'right';
-			
-			var widthFactor = leftRight ? .9 : .5;
-			var heightFactor = leftRight ? .5 : .9;
-			var rect = {
-				x: ((1-widthFactor) / 2) * size.width,
-				y: ((1-heightFactor) / 2) * size.height,
-				width: size.width * widthFactor,
-				height: size.height * heightFactor
-			}
-
-			return tiles.utils.rectToPolygon(rect)
+			return this.polygon;
 		}
 	};
 };
@@ -100,12 +102,22 @@ grasslands.generateRockConfig = function(number) {
 			'default': ['rock']
 		},
 		type: 'rock',
+		polygon: [
+			{x:32, y:1},
+			{x:7, y:14},
+			{x:0, y:36},
+			{x:17, y:62},
+			{x:44, y:62},
+			{x:62, y:46},
+			{x:63, y:25},
+			{x:55, y:13},
+		],
 		onInit: function(rock, world) {
 			var extents = world.mapData.extents(world.resources.tileSize);
-			rock.location = { 
-				x:1000, 
-				y:world.resources.tileSize.height * (number + 0.5)
-			};
+			rock.location({ 
+				x:extents.width * Math.random() + 80,
+				y:extents.height * Math.random() + 150
+			});
 			rock.setSprite('default');
 		},
 		/*
@@ -113,16 +125,7 @@ grasslands.generateRockConfig = function(number) {
 			character.renderHitArea(ctx, world);
 		},*/
 		hitArea: function(character, world) {
-			var poly = [];
-			poly.push({x:32, y:1});
-			poly.push({x:7, y:14});
-			poly.push({x:0, y:36});
-			poly.push({x:17, y:62});
-			poly.push({x:44, y:62});
-			poly.push({x:62, y:46});
-			poly.push({x:63, y:25});
-			poly.push({x:55, y:13});
-			return poly;
+			return this.polygon;
 		}
 	};	
 };
@@ -131,7 +134,7 @@ grasslands.generateRockConfig = function(number) {
 	var canvas = document.getElementById('tiles');
 	var inputs = new grasslands.InputHandler();
 
-	$(window).resize(function(){
+	$(window).resize(function() {
 		canvas.width = $('.container').width();
 		canvas.height = $('.container').height();
 	});
@@ -149,6 +152,15 @@ grasslands.generateRockConfig = function(number) {
 
 	var extents = mapData.extents(resources.tileSize);
 
+	var entListContainsType = function(type, entList) {
+		for(var i=0,len=entList.length; i < len; ++i) {
+			if (entList[i].type() == type)
+				return true;
+		}
+
+		return false;
+	}
+
 	var mainCharacterConfig = {
 		spriteSets: {
 			'left': tiles.utils.generateSpriteSlice('character', 1, 9, true),
@@ -161,7 +173,7 @@ grasslands.generateRockConfig = function(number) {
 		speed: 2,
 		mapExtents: extents,
 		onInit: function(character, world) {
-			character.location = {x: 100, y: 100};
+			character.location({x: 100, y: 100});
 			character.setSprite('down', 0, false);
 		},
 		onUpdate: function(character, world) {
@@ -211,11 +223,12 @@ grasslands.generateRockConfig = function(number) {
 				var characterMomentumX = character.velocityMagnitude * Math.cos(character.velocityAngle);
 				var carMomentumX = entity.velocityMagnitude * Math.cos(entity.velocityAngle);
 				var characterSize = character.size(world);
+				var characterLocation = character.location();
 
 				dx = carMomentumX - characterMomentumX;
 
-				if (character.location.x + dx < 0 ||
-					character.location.x + characterSize.width >= this.mapExtents.width ||
+				if (characterLocation.x + dx < 0 ||
+					characterLocation.x + characterSize.width >= this.mapExtents.width ||
 					prevCollisions.length > 0) {
 					dy = dx;
 					dx = 0;
@@ -240,9 +253,9 @@ grasslands.generateRockConfig = function(number) {
 
 	var entities = [];
 	var mainCharacter = new tiles.Entity(mainCharacterConfig);	
-	var numRocks = extents.rows * extents.cols * .1;
+	var numRocks = extents.rows * extents.cols * .20;
 
-	for (var i=0; i < extents.rows; ++i) {
+	for (var i=0; i < numRocks; ++i) {
 		entities.push(new tiles.Entity(grasslands.generateRockConfig(i)));
 	}
 
@@ -254,10 +267,6 @@ grasslands.generateRockConfig = function(number) {
 	
 	var world = new tiles.World(mapData, entities, resources, canvas);
 	world.centerOn(mainCharacter);
-	world.onTick(function() {
-		
-	});
-
 	resources.load(function() {
 		world.start();
 	});
