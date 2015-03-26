@@ -302,7 +302,7 @@ tiles.Sprite = function(resources) {
         else
             throw 'No sprite active'
     };
-}
+};
 
 tiles.Entity = function(config) {
     var cachedSize = null;
@@ -526,7 +526,7 @@ tiles.Entity = function(config) {
         ctx.stroke();
         ctx.restore();
     };
-}
+};
 
 tiles.Tile = function(own, rez) {
     var resource = rez instanceof Array ? rez : [rez];

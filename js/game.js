@@ -2,7 +2,27 @@ var grasslands = grasslands || {};
 
 grasslands.InputHandler = function() {
 	this.keyboard = {keys: []},
-	this.mouse = {position: undefined, down:false};
+	this.mouse = {position: undefined, down:false, previousPositions:[]};
+
+	var configureListener = function(selector, keyCode) {
+		$(selector).mousedown(function() {
+			this.keyboard.keys.push(keyCode);
+		}.bind(this));
+
+		$(selector).mouseup(function() {
+			var keys = this.keyboard.keys;
+			var index = keys.indexOf(keyCode);
+			if (index >= 0) {
+				keys.splice(index, 1);
+				this.keyboard.keys = keys;
+			}	
+		}.bind(this));
+	}.bind(this);
+
+	configureListener('.dpad-left', 37);
+	configureListener('.dpad-right', 39);
+	configureListener('.dpad-up', 38);
+	configureListener('.dpad-down', 40);
 
 	$(window).keydown(function(e) {
 		var keys = this.keyboard.keys;
@@ -26,6 +46,8 @@ grasslands.InputHandler = function() {
 
 	$(window).mousemove(function(e){
 		this.mouse.position = {x:e.clientX, y:e.clientY};
+		if (this.mouse.down)
+			this.mouse.previousPositions.push(this.mouse.position);
 	}.bind(this));
 
 	$(window).mouseup(function(e){

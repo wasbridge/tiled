@@ -10,3 +10,126 @@ html, body {
 	width:100%;
 	height:100%;
 }
+
+.expanding {
+	flex: 1 1;
+}
+
+.controller {
+	width: 100%;
+	position: absolute;
+	bottom: 10px;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	flex-wrap: nowrap;
+
+	-webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+div[class^='dpad-'], div[class*=' dpad-'] {
+    background-image: url('./../img/arrow.png');
+    cursor: pointer;
+    width: 64px;
+    height: 64px;
+}
+
+div[class^='dpad-']:hover, div[class*=' dpad-']:hover
+div[class^='dpad-']:active,div[class*=' dpad-']:active {
+   background-image: url('./../img/arrow-dark.png');
+}
+
+div.dpad-up, div.dpad-down {
+	margin-left: auto;
+	margin-right: auto;
+}
+
+div.dpad-left, div.dpad-right {
+	display: inline-block;
+}
+
+div.dpad-up {
+	position: relative;
+	top: 10px;
+    transform: rotate(90deg);
+}
+
+div.dpad-left {
+	position: relative;
+}
+
+div.dpad-right {
+    transform: rotate(180deg);
+}
+
+div.dpad-down {
+	position: relative;
+	bottom: 10px;
+    transform: rotate(270deg);
+}
+
+.dpad {
+	margin-left: 40px;
+}
+
+.b-button {
+	width: 64px;
+	height: 64px;
+	margin-right: 40px;
+	margin-left: 20px;
+}
+
+.a-button {
+	width: 64px;
+	height: 64px;
+	margin-right: 20px;
+	top: 20px !important;
+}
+
+.a-button:active {
+	top: 25px !important;
+}
+
+.push-button-text {
+	position: relative;
+	top: 12px;
+	font-family: Helvetica;
+	font-size: 48px;
+}
+
+.push-button {
+	position: relative;
+	top: 0px;
+
+	cursor: pointer;
+	
+	color: whitesmoke;
+
+	display:block;
+	text-decoration:none;
+	border-radius:999px;
+	border:solid 1px #D94E3B;
+	background:#cb3b27;
+	text-align:center;
+	vertical-align: middle;
+	
+	-webkit-transition: all 0.1s;
+	-moz-transition: all 0.1s;
+	transition: all 0.1s;
+	
+	-webkit-box-shadow: 0px 9px 0px #84261a;
+    -moz-box-shadow: 0px 9px 0px #84261a;
+    box-shadow: 0px 9px 0px #84261a;
+}
+
+.push-button:active {
+	top: 5px;
+    -webkit-box-shadow: 0px 2px 0px #84261a;
+    -moz-box-shadow: 0px 2px 0px #84261a;
+    box-shadow: 0px 2px 0px #84261a;
+}
