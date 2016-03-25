@@ -7,15 +7,14 @@ grasslands.InputHandler = function() {
 	var configureListener = function(selector, keyCode) {
 		$(selector).mousedown(function() {
 			this.keyboard.keys.push(keyCode);
-		}.bind(this));
-
-		$(selector).mouseup(function() {
-			var keys = this.keyboard.keys;
-			var index = keys.indexOf(keyCode);
-			if (index >= 0) {
-				keys.splice(index, 1);
-				this.keyboard.keys = keys;
-			}	
+			$(window).one('mouseup', function() {
+				var keys = this.keyboard.keys;
+				var index = keys.indexOf(keyCode);
+				if (index >= 0) {
+					keys.splice(index, 1);
+					this.keyboard.keys = keys;
+				}	
+			}.bind(this));
 		}.bind(this));
 	}.bind(this);
 
@@ -118,6 +117,38 @@ grasslands.generateCarConfig = function(number) {
 	};
 };
 
+grasslands.generatePowerupConfig = function(number, type) {
+	var row = number % 6;
+
+	return {
+		spriteSets: {
+			'default': tiles.utils.generateSpriteSlice('powerup', row, 8, true)
+		},
+		type: type,
+		polygon: [
+			{x:15, y:15},
+			{x:65, y:15},
+			{x:65, y:65},
+			{x:15, y:65}
+		],
+		onInit: function(item, world) {
+			var extents = world.mapData.extents(world.resources.tileSize);
+			item.location({ 
+				x:Math.random() * extents.width,
+				y:Math.random() * extents.height
+			});
+			item.setSprite('default', 0, true);
+			item.changeSpriteSpeed(0.5);
+		},
+		/*postRender: function(ctx, character, world) {
+			character.renderHitArea(ctx, world);
+		},*/ 
+		hitArea: function() {
+			return this.polygon;
+		}
+	};	
+};
+
 grasslands.generateRockConfig = function(number) {
 	return {
 		spriteSets: {
@@ -137,8 +168,8 @@ grasslands.generateRockConfig = function(number) {
 		onInit: function(rock, world) {
 			var extents = world.mapData.extents(world.resources.tileSize);
 			rock.location({ 
-				x:1000,
-				y:world.resources.tileSize.height * (number + 0.5)
+				x:Math.random() * extents.width,
+				y:Math.random() * extents.height
 			});
 			rock.setSprite('default');
 		},
@@ -211,6 +242,10 @@ grasslands.mainCharacterConfig = function(inputs, extents) {
 					dx = 0;
 					dy = -character.velocityMagnitude * Math.cos(character.velocityAngle);
 				}
+
+				character.move(dx, dy);
+				character.clearCollision(entity, world, prevCollisions);
+
 			} else if (entity.type() == 'car') {
 				var characterMomentumX = character.velocityMagnitude * Math.cos(character.velocityAngle);
 				var carMomentumX = entity.velocityMagnitude * Math.cos(entity.velocityAngle);
@@ -225,10 +260,12 @@ grasslands.mainCharacterConfig = function(inputs, extents) {
 					dy = dx;
 					dx = 0;
 				}
-			}
 
-			character.move(dx, dy);
-			character.clearCollision(entity, world, prevCollisions);
+				character.move(dx, dy);
+				character.clearCollision(entity, world, prevCollisions);
+			} else {
+				world.removeEntity(entity);
+			}
 		},
 		/*postRender: function(ctx, character, world) {
 			character.renderHitArea(ctx, world);
@@ -255,10 +292,12 @@ grasslands.mainCharacterConfig = function(inputs, extents) {
 
 	$(window).trigger("resize");
 
+	
 	var resources = new tiles.Resources({width: 250, height: 250});
 	resources.emplaceTileData('road', 'img/road.png');
 	resources.emplaceEntitySprite('character', 'img/character-9x4x.png', 4, 9);
 	resources.emplaceEntitySprite('car', 'img/car-4x4x.png', 4, 4);
+	resources.emplaceEntitySprite('powerup', 'img/powerups.png', 6, 8);
 	resources.emplaceEntityData('rock', 'img/rock.png');
 
 	var mapData = new tiles.MapData('road');
@@ -268,15 +307,23 @@ grasslands.mainCharacterConfig = function(inputs, extents) {
 	var extents = mapData.extents(resources.tileSize);
 	var numRocks = extents.rows * extents.cols * .20;
 
-	for (var i=0; i < extents.rows; ++i) {
+	for (var i=0; i < 200; ++i) {
 		entities.push(new tiles.Entity(grasslands.generateRockConfig(i)));
 	}
 
 	for (var i=0; i < extents.rows; ++i) {
 		entities.push(new tiles.Entity(grasslands.generateCarConfig(i)));
 	}
+
+	for (var i=0; i < 100; ++i) {
+		entities.push(new tiles.Entity(grasslands.generatePowerupConfig(i, 'speed')));
+	}
 	
-	var mainCharacter = new tiles.Entity(grasslands.mainCharacterConfig(inputs, extents));	
+	for (var i=0; i < 100; ++i) {
+		entities.push(new tiles.Entity(grasslands.generatePowerupConfig(i, 'invincible')));
+	}
+
+	var mainCharacter = new tiles.Entity(grasslands.mainCharacterConfig(inputs, extents));
 	entities.push(mainCharacter);
 
 	var world = new tiles.World(mapData, entities, resources, canvas);
